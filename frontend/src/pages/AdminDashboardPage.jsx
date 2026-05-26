@@ -1,22 +1,19 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import "../styles/admin.css";
 import {
-  blockUser,
   cancelBooking,
   createBus,
   createRoute,
   deleteBus,
   deleteRoute,
-  deleteUser,
   getAdminReports,
   getBuses,
   getBookings,
   getRoutes,
   getUsers,
-  unblockUser,
   updateBus,
   updateRoute,
-  updateUser,
 } from "../services/adminApi";
 
 const blankBus = { busNumber: "", busName: "", busType: "", totalSeats: "" };
@@ -45,6 +42,11 @@ function formatRegDate(value) {
   } catch (e) {
     return s.slice(0, 10);
   }
+}
+
+function formatTime(value) {
+  if (!value) return "";
+  return String(value).slice(0, 5);
 }
 
 export default function AdminDashboardPage() {
@@ -90,6 +92,12 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => setMessage(""), 3000);
+    return () => clearTimeout(timer);
+  }, [message]);
 
   function resetForms(section) {
     if (section === "buses") {
@@ -188,9 +196,9 @@ export default function AdminDashboardPage() {
       source: route.source || "",
       destination: route.destination || "",
       travelDate: route.travelDate || "",
-      departureTime: formatDateTime(route.departureTime),
-      arrivalTime: formatDateTime(route.arrivalTime),
       fare: route.fare ?? "",
+      arrivalTime: formatTime(route.arrivalTime),
+      departureTime: formatTime(route.departureTime),
       busId: route.bus?.busId || "",
     });
   }
@@ -247,6 +255,23 @@ export default function AdminDashboardPage() {
 
   return (
     <main className="dash-shell admin-shell">
+      <div className="admin-toast-area" aria-live="polite" aria-atomic="true">
+        {error ? (
+          <div className="admin-alert admin-alert-error admin-toast">
+            <div className="toast-content">{error}</div>
+            <button className="toast-close" onClick={() => setError("")} aria-label="Dismiss error">×</button>
+          </div>
+        ) : null}
+
+        {message ? (
+          <div className="admin-alert admin-alert-success admin-toast">
+            <div className="toast-content">{message}</div>
+            <button className="toast-close" onClick={() => setMessage("")} aria-label="Dismiss">×</button>
+            <div className="toast-progress" aria-hidden="true" />
+          </div>
+        ) : null}
+      </div>
+
       <section className="dash-card admin-dashboard-card admin-grid-shell">
         <div className="admin-header">
           <div>
@@ -266,9 +291,6 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {error ? <div className="admin-alert admin-alert-error">{error}</div> : null}
-        {message ? <div className="admin-alert admin-alert-success">{message}</div> : null}
-
         <section className="admin-panel admin-panel-full">
           <div className="panel-card">
             <h2>Bus Management</h2>
@@ -284,8 +306,8 @@ export default function AdminDashboardPage() {
               </select>
               <input type="number" min="1" placeholder="Seat capacity" value={busForm.totalSeats} onChange={(event) => setBusForm({ ...busForm, totalSeats: event.target.value })} />
               <div className="form-row">
-                <button type="submit">{editingBusId ? "Update Bus" : "Add Bus"}</button>
-                <button type="button" className="ghost-btn" onClick={() => resetForms("buses")}>Clear</button>
+                <button type="submit" className="primary-btn btn">{editingBusId ? "Update Bus" : "Add Bus"}</button>
+                <button type="button" className="ghost-btn btn" onClick={() => resetForms("buses")}>Clear</button>
               </div>
             </form>
             <div className="table-wrap">
@@ -301,8 +323,8 @@ export default function AdminDashboardPage() {
                       <td>{bus.busType}</td>
                       <td>{bus.totalSeats}</td>
                       <td className="table-actions">
-                        <button type="button" onClick={() => editBus(bus)}>Edit</button>
-                        <button type="button" className="ghost-btn" onClick={() => handleDeleteBus(bus.busId)}>Delete</button>
+                        <button type="button" className="secondary-btn btn" onClick={() => editBus(bus)}>Edit</button>
+                        <button type="button" className="danger-btn btn small" onClick={() => handleDeleteBus(bus.busId)}>Delete</button>
                       </td>
                     </tr>
                   ))}
@@ -314,19 +336,55 @@ export default function AdminDashboardPage() {
           <div className="panel-card">
             <h2>Route & Schedule Management</h2>
             <form className="admin-form admin-form-grid" onSubmit={saveRoute}>
-              <input placeholder="Source" value={routeForm.source} onChange={(event) => setRouteForm({ ...routeForm, source: event.target.value })} />
-              <input placeholder="Destination" value={routeForm.destination} onChange={(event) => setRouteForm({ ...routeForm, destination: event.target.value })} />
-              <input type="date" value={routeForm.travelDate} onChange={(event) => setRouteForm({ ...routeForm, travelDate: event.target.value })} />
-              <input type="datetime-local" value={routeForm.departureTime} onChange={(event) => setRouteForm({ ...routeForm, departureTime: event.target.value })} />
-              <input type="datetime-local" value={routeForm.arrivalTime} onChange={(event) => setRouteForm({ ...routeForm, arrivalTime: event.target.value })} />
-              <input type="number" min="0" step="0.01" placeholder="Fare" value={routeForm.fare} onChange={(event) => setRouteForm({ ...routeForm, fare: event.target.value })} />
-              <select value={routeForm.busId} onChange={(event) => setRouteForm({ ...routeForm, busId: event.target.value })}>
+              <input
+                placeholder="Source"
+                value={routeForm.source}
+                onChange={(event) => setRouteForm({ ...routeForm, source: event.target.value })}
+              />
+              <input
+                placeholder="Destination"
+                value={routeForm.destination}
+                onChange={(event) => setRouteForm({ ...routeForm, destination: event.target.value })}
+              />
+              <input
+                type="date"
+                value={routeForm.travelDate}
+                onChange={(event) => setRouteForm({ ...routeForm, travelDate: event.target.value })}
+              />
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Fare"
+                value={routeForm.fare}
+                onChange={(event) => setRouteForm({ ...routeForm, fare: event.target.value })}
+              />
+              <input
+                type="time"
+                value={routeForm.departureTime}
+                onChange={(event) => setRouteForm({ ...routeForm, departureTime: event.target.value })}
+              />
+              <input
+                type="time"
+                value={routeForm.arrivalTime}
+                onChange={(event) => setRouteForm({ ...routeForm, arrivalTime: event.target.value })}
+              />
+              <select
+                value={routeForm.busId}
+                onChange={(event) => setRouteForm({ ...routeForm, busId: event.target.value })}
+              >
                 <option value="">Assign bus</option>
-                {buses.map((bus) => <option key={bus.busId} value={bus.busId}>{bus.busName} ({bus.busNumber})</option>)}
+                {buses.map((bus) => (
+                  <option key={bus.busId} value={bus.busId}>
+                    {bus.busName} ({bus.busNumber})
+                  </option>
+                ))}
               </select>
               <div className="form-row full-row">
                 <button type="submit">{editingRouteId ? "Update Route" : "Add Route"}</button>
-                <button type="button" className="ghost-btn" onClick={() => resetForms("routes")}>Clear</button>
+                <button type="button" className="ghost-btn btn" onClick={() => resetForms("routes")}>
+                  Clear
+                </button>
               </div>
             </form>
             <div className="table-wrap">
@@ -339,8 +397,8 @@ export default function AdminDashboardPage() {
                     <tr key={route.routeId}>
                       <td>{route.source} → {route.destination}</td>
                       <td>{route.travelDate}</td>
-                      <td>{formatDateTime(route.departureTime)}</td>
-                      <td>{formatDateTime(route.arrivalTime)}</td>
+                      <td>{formatTime(route.departureTime)}</td>
+                      <td>{formatTime(route.arrivalTime)}</td>
                       <td>{route.fare}</td>
                       <td>{route.bus?.busName || "-"}</td>
                       <td className="table-actions">

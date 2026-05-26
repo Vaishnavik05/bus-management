@@ -1,24 +1,24 @@
 package com.example.busbooking.controller;
+
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.busbooking.entity.Bus;
-import com.example.busbooking.repository.BusRepository;
 import com.example.busbooking.entity.Seat;
 import com.example.busbooking.enums.SeatType;
+import com.example.busbooking.repository.BusRepository;
 import com.example.busbooking.repository.SeatRepository;
-import java.util.ArrayList;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/buses")
@@ -33,19 +33,22 @@ public class BusController {
     @PostMapping
     public Bus addBus(@RequestBody Bus bus) {
         Bus saved = repo.save(bus);
-        // create seats for this bus
         int total = Math.max(0, saved.getTotalSeats());
         List<Seat> seats = new ArrayList<>();
+
         for (int i = 1; i <= total; i++) {
             Seat s = new Seat();
             s.setSeatNumber(String.valueOf(i));
-            // alternate seat type for basic distribution
             s.setSeatType(i % 2 == 1 ? SeatType.WINDOW : SeatType.AISLE);
             s.setAvailable(true);
             s.setBus(saved);
             seats.add(s);
         }
-        if (!seats.isEmpty()) seatRepo.saveAll(seats);
+
+        if (!seats.isEmpty()) {
+            seatRepo.saveAll(seats);
+        }
+
         return saved;
     }
 
@@ -65,16 +68,15 @@ public class BusController {
         existing.setBusNumber(bus.getBusNumber());
         existing.setBusName(bus.getBusName());
         existing.setBusType(bus.getBusType());
-        int oldTotal = existing.getTotalSeats();
+
         int newTotal = bus.getTotalSeats();
         existing.setTotalSeats(newTotal);
         Bus saved = repo.save(existing);
 
-        // adjust seats
         List<Seat> existingSeats = seatRepo.findByBus_BusId(saved.getBusId());
         int existingCount = existingSeats.size();
+
         if (newTotal > existingCount) {
-            // add missing seats
             List<Seat> toAdd = new ArrayList<>();
             for (int i = existingCount + 1; i <= newTotal; i++) {
                 Seat s = new Seat();
@@ -84,9 +86,10 @@ public class BusController {
                 s.setBus(saved);
                 toAdd.add(s);
             }
-            if (!toAdd.isEmpty()) seatRepo.saveAll(toAdd);
+            if (!toAdd.isEmpty()) {
+                seatRepo.saveAll(toAdd);
+            }
         } else if (newTotal < existingCount) {
-            // mark extra seats as unavailable but keep records
             for (Seat s : existingSeats) {
                 try {
                     int num = Integer.parseInt(s.getSeatNumber());
@@ -94,7 +97,6 @@ public class BusController {
                         s.setAvailable(false);
                     }
                 } catch (NumberFormatException e) {
-                    // leave as is if not numeric
                 }
             }
             seatRepo.saveAll(existingSeats);

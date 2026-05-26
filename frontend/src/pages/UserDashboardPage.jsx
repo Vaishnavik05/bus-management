@@ -1,527 +1,387 @@
-import { useMemo, useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { getMyBookings } from "../services/userApi";
 import { useAuth } from "../context/AuthContext";
-import { getMyBookings, cancelBooking, createBooking } from "../services/userApi";
-import { getRoutes } from "../services/adminApi";
+
+async function fetchAllRoutes() {
+  const res = await fetch("/api/routes", {
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(text || "Unable to load buses");
+  }
+
+  return res.json();
+}
 
 export default function UserDashboardPage() {
-  const { user, logout } = useAuth();
-
-  const [searchForm, setSearchForm] = useState({
+  const [allRoutes, setAllRoutes] = useState([]);
+  const [results, setResults] = useState([]);
+  const [myBookings, setMyBookings] = useState([]);
+  const [form, setForm] = useState({
     source: "",
     destination: "",
     date: "",
-    time: "",
+    busType: "",
   });
-  const [searchDone, setSearchDone] = useState(false);
-  const [selectedBusId, setSelectedBusId] = useState("");
-  const [selectedSeats, setSelectedSeats] = useState([]);
-  const [paymentData, setPaymentData] = useState({
-    cardName: "",
-    cardNumber: "",
-    expiry: "",
-    cvv: "",
-  });
-  const [paymentSuccess, setPaymentSuccess] = useState(false);
-  const [bookings, setBookings] = useState([]);
-  const [paymentError, setPaymentError] = useState("");
-  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [selectedRoute, setSelectedRoute] = useState(null);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
-  const [availableBuses, setAvailableBuses] = useState([]);
-  const selectedBus = useMemo(
-    () => availableBuses.find((bus) => bus.id === selectedBusId) || null,
-    [selectedBusId, availableBuses]
-  );
+  const navigate = useNavigate();
+  const { logout } = useAuth();
 
-  const totalFare = selectedBus ? selectedBus.fare * selectedSeats.length : 0;
-
-  function handleSearchChange(event) {
-    const { name, value } = event.target;
-    setSearchForm((prev) => {
-      const newForm = { ...prev, [name]: value };
-      // if both source and destination are set, do a quick search
-      if (newForm.source && newForm.destination) {
-        quickSearch(newForm);
-      }
-      return newForm;
-    });
-  }
-
-  function quickSearch(form) {
-    const src = form.source.trim().toLowerCase();
-    const dst = form.destination.trim().toLowerCase();
-    const date = form.date;
-    const time = form.time;
-
-    getRoutes()
-      .then((routes) => {
-        const results = (routes || [])
-          .map((r) => {
-            const bus = r.bus || {};
-            let routeDate = r.travelDate || "";
-            let depTime = "";
-            let arrTime = "";
-            if (!routeDate && r.departureTime) {
-              const d = new Date(r.departureTime);
-              routeDate = d.toISOString().slice(0, 10);
-              depTime = d.toTimeString().slice(0, 5);
-            } else if (r.departureTime) {
-              const d = new Date(r.departureTime);
-              depTime = d.toTimeString().slice(0, 5);
-            }
-            if (r.arrivalTime) {
-              const a = new Date(r.arrivalTime);
-              arrTime = a.toTimeString().slice(0, 5);
-            }
-
-            return {
-              id: r.routeId,
-              operator: bus.busName || bus.busNumber || "Operator",
-              source: r.source,
-              destination: r.destination,
-              date: routeDate,
-              time: depTime,
-              arrival: arrTime,
-              fare: r.fare,
-              seatsAvailable: bus.totalSeats || 0,
-              raw: r,
-            };
-          })
-          .filter((bus) => {
-            const sourceMatch = bus.source.toLowerCase().includes(src);
-            const destinationMatch = bus.destination.toLowerCase().includes(dst);
-            const dateMatch = date ? bus.date === date : true;
-            const timeMatch = time ? (bus.time || "") >= time : true;
-            return sourceMatch && destinationMatch && dateMatch && timeMatch;
-          });
-
-        setAvailableBuses(results);
-        setSearchDone(true);
-      })
-      .catch(() => setAvailableBuses([]));
-  }
-
-  function handleSearchSubmit(event) {
-    event.preventDefault();
-    setSearchDone(true);
-    setSelectedBusId("");
-    setSelectedSeats([]);
-    setPaymentSuccess(false);
-    // fetch routes from backend and map to available buses
-    const src = searchForm.source.trim().toLowerCase();
-    const dst = searchForm.destination.trim().toLowerCase();
-    const date = searchForm.date;
-    const time = searchForm.time;
-
-    getRoutes()
-      .then((routes) => {
-        const results = (routes || [])
-          .map((r) => {
-            const bus = r.bus || {};
-            // derive date/time from travelDate or departureTime
-            let routeDate = r.travelDate || "";
-            let depTime = "";
-            let arrTime = "";
-            if (!routeDate && r.departureTime) {
-              const d = new Date(r.departureTime);
-              routeDate = d.toISOString().slice(0, 10);
-              depTime = d.toTimeString().slice(0, 5);
-            } else if (r.departureTime) {
-              const d = new Date(r.departureTime);
-              depTime = d.toTimeString().slice(0, 5);
-            }
-            if (r.arrivalTime) {
-              const a = new Date(r.arrivalTime);
-              arrTime = a.toTimeString().slice(0, 5);
-            }
-
-            return {
-              id: r.routeId,
-              operator: bus.busName || bus.busNumber || "Operator",
-              source: r.source,
-              destination: r.destination,
-              date: routeDate,
-              time: depTime,
-              arrival: arrTime,
-              fare: r.fare,
-              seatsAvailable: bus.totalSeats || 0,
-              raw: r,
-            };
-          })
-          .filter((bus) => {
-            const sourceMatch = bus.source.toLowerCase().includes(src);
-            const destinationMatch = bus.destination.toLowerCase().includes(dst);
-            const dateMatch = date ? bus.date === date : true;
-            const timeMatch = time ? (bus.time || "") >= time : true;
-            return sourceMatch && destinationMatch && dateMatch && timeMatch;
-          });
-
-        setAvailableBuses(results);
-      })
-      .catch(() => {
-        setAvailableBuses([]);
-      });
-  }
-
-  async function handlePayment(event) {
-    event.preventDefault();
-    if (!selectedBus) return;
-    setPaymentError("");
-    // client-side validation
-    const cardDigits = String(paymentData.cardNumber).replace(/\D/g, "");
-    if (cardDigits.length !== 16) {
-      setPaymentError("Card number must be 16 digits.");
-      return;
-    }
-    if (!/^\d{2}\/\d{2}$/.test(paymentData.expiry)) {
-      setPaymentError("Expiry must be in MM/YY format.");
-      return;
-    }
-    if (!/^\d{3}$/.test(paymentData.cvv)) {
-      setPaymentError("CVV must be 3 digits.");
-      return;
-    }
-
-    const payload = {
-      route: { routeId: selectedBus.id },
-      seats: selectedSeats,
-      totalAmount: totalFare,
-      payment: {
-        cardHolder: paymentData.cardName,
-        cardNumber: cardDigits,
-        expiry: paymentData.expiry,
-      },
-    };
-
+  async function loadMyBookings() {
     try {
-      setPaymentProcessing(true);
-      const res = await createBooking(payload);
-      setPaymentSuccess(true);
-      setPaymentData({ cardName: "", cardNumber: "", expiry: "", cvv: "" });
-      await loadBookings();
+      const data = await getMyBookings();
+      setMyBookings(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error("Payment error:", err);
-      setPaymentError(err?.response?.data?.message || err.message || "Payment failed");
-      setPaymentSuccess(false);
-    } finally {
-      setPaymentProcessing(false);
+      setError(err.message || "Unable to load bookings");
     }
-  }
-
-  function loadBookings() {
-    getMyBookings()
-      .then((data) => {
-        const items = (data || []).map((b) => ({
-          id: b.bookingId || b.id,
-          bus: b.route?.bus || null,
-          route: b.route || null,
-          seats: b.seats || [],
-          amount: b.totalAmount || b.amount || 0,
-          status: b.status || "",
-          createdAt: b.bookingDate || b.createdAt || b.date,
-        }));
-        setBookings(items);
-      })
-      .catch(() => setBookings([]));
   }
 
   useEffect(() => {
-    loadBookings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!message) return;
+    const timer = setTimeout(() => setMessage(""), 3000);
+    return () => clearTimeout(timer);
+  }, [message]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadAllData() {
+      setLoading(true);
+      setError("");
+      try {
+        const [routesData, bookingsData] = await Promise.all([
+          fetchAllRoutes(),
+          getMyBookings(),
+        ]);
+
+        if (!mounted) return;
+        setAllRoutes(routesData || []);
+        setResults(routesData || []);
+        setMyBookings(Array.isArray(bookingsData) ? bookingsData : []);
+      } catch (err) {
+        if (!mounted) return;
+        setError(err.message || "Unable to load dashboard data");
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    loadAllData();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  function handleCancel(bookingId) {
-    if (!confirm("Cancel this booking?")) return;
-    cancelBooking(bookingId).then(() => loadBookings());
+  function applyFilter(list, filters) {
+    return list.filter((route) => {
+      const source = String(route.source || "").toLowerCase();
+      const destination = String(route.destination || "").toLowerCase();
+      const travelDate = String(route.travelDate || "").toLowerCase();
+      const busType = String(route.bus?.busType || route.busType || "").toLowerCase();
+
+      const sourceMatch = !filters.source || source.includes(filters.source.toLowerCase());
+      const destinationMatch =
+        !filters.destination || destination.includes(filters.destination.toLowerCase());
+      const dateMatch = !filters.date || travelDate.includes(filters.date.toLowerCase());
+      const typeMatch = !filters.busType || busType.includes(filters.busType.toLowerCase());
+
+      return sourceMatch && destinationMatch && dateMatch && typeMatch;
+    });
   }
 
+  async function handleSearch(event) {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const filtered = applyFilter(allRoutes, form);
+      setResults(filtered);
+      if (!filtered.length) {
+        setMessage("No buses found for your search.");
+      }
+    } catch (err) {
+      setError(err.message || "Search failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function resetSearch() {
+    const cleared = { source: "", destination: "", date: "", busType: "" };
+    setForm(cleared);
+    setResults(allRoutes);
+  }
+
+  function refreshAll() {
+    setResults(allRoutes);
+    setForm({ source: "", destination: "", date: "", busType: "" });
+    setMessage("Showing all buses.");
+  }
+
+  const bookingCount = myBookings.length;
+  const confirmedCount = myBookings.filter((booking) =>
+    String(booking.status || "").toUpperCase() === "BOOKED"
+  ).length;
+  const latestBooking = myBookings[0];
+
   return (
-    <main className="user-shell">
-      <section className="user-card">
-        <header className="user-header">
-          <div>
-            <h1>User Dashboard</h1>
-            <p>
-              Welcome {user?.name || "User"}. Search buses, select seats, and
-              complete payment.
-            </p>
+    <main className="dash-shell user-shell">
+      <div className="dashboard-shell">
+        <div className="user-toast-area" aria-live="polite" aria-atomic="true">
+          {message ? (
+            <div className="admin-toast admin-alert admin-toast-success">
+              <div className="toast-content">{message}</div>
+              <button className="toast-close" onClick={() => setMessage("")} aria-label="Dismiss">
+                ×
+              </button>
+              <div className="toast-progress" aria-hidden="true" />
+            </div>
+          ) : null}
+
+          {error ? (
+            <div className="admin-toast admin-alert admin-alert-error">
+              <div className="toast-content">{error}</div>
+              <button className="toast-close" onClick={() => setError("")} aria-label="Dismiss error">
+                ×
+              </button>
+            </div>
+          ) : null}
+        </div>
+
+        <section className="dashboard-hero panel-card">
+          <div className="dashboard-hero-top">
+            <div>
+              <div className="dashboard-badge">User Dashboard</div>
+              <h1 className="dashboard-title">Plan, book, and track your trips in one place</h1>
+              <p className="dashboard-subtitle">
+                Search available buses, book seats, and review your booking history below.
+              </p>
+            </div>
+
+            <div className="dashboard-actions">
+              <button type="button" className="secondary-btn" onClick={refreshAll}>
+                Refresh routes
+              </button>
+              <button type="button" className="ghost-btn" onClick={() => loadMyBookings()}>
+                Refresh bookings
+              </button>
+              <button
+                type="button"
+                className="logout-btn"
+                onClick={() => {
+                  logout();
+                  navigate("/login", { replace: true });
+                }}
+              >
+                Logout
+              </button>
+            </div>
           </div>
-          <button className="logout-btn" onClick={logout}>
-            Logout
-          </button>
-        </header>
 
-        <section className="panel-block">
-          <h2>1. Search Buses</h2>
-          <form className="search-grid" onSubmit={handleSearchSubmit}>
-            <label htmlFor="source">Source</label>
+          <div className="dashboard-kpis">
+            <div className="kpi-card">
+              <span className="kpi-label">Available routes</span>
+              <strong>{results.length}</strong>
+            </div>
+            <div className="kpi-card">
+              <span className="kpi-label">Your bookings</span>
+              <strong>{bookingCount}</strong>
+            </div>
+            <div className="kpi-card">
+              <span className="kpi-label">Booked trips</span>
+              <strong>{confirmedCount}</strong>
+            </div>
+            <div className="kpi-card">
+              <span className="kpi-label">Latest booking</span>
+              <strong>{latestBooking ? `#${latestBooking.bookingId}` : "None"}</strong>
+            </div>
+          </div>
+        </section>
+
+        <section className="panel-card dashboard-section">
+          <div className="section-head">
+            <div>
+              <h2>Search Buses</h2>
+              <p>Filter by source, destination, date, or bus type.</p>
+            </div>
+          </div>
+
+          <form className="user-search-form" onSubmit={handleSearch}>
             <input
-              id="source"
-              name="source"
-              type="text"
-              placeholder="e.g. Chennai"
-              value={searchForm.source}
-              onChange={handleSearchChange}
-              required
+              placeholder="Source (e.g. Chennai)"
+              value={form.source}
+              onChange={(e) => setForm({ ...form, source: e.target.value })}
             />
-
-            <label htmlFor="destination">Destination</label>
             <input
-              id="destination"
-              name="destination"
-              type="text"
-              placeholder="e.g. Bangalore"
-              value={searchForm.destination}
-              onChange={handleSearchChange}
-              required
+              placeholder="Destination (e.g. Bangalore)"
+              value={form.destination}
+              onChange={(e) => setForm({ ...form, destination: e.target.value })}
             />
-
-            <label htmlFor="date">Date</label>
             <input
-              id="date"
-              name="date"
               type="date"
-              value={searchForm.date}
-              onChange={handleSearchChange}
-              required
+              value={form.date}
+              onChange={(e) => setForm({ ...form, date: e.target.value })}
             />
+            <select
+              value={form.busType}
+              onChange={(e) => setForm({ ...form, busType: e.target.value })}
+            >
+              <option value="">All bus types</option>
+              <option value="SLEEPER_AC">Sleeper AC</option>
+              <option value="SLEEPER_NON_AC">Sleeper Non AC</option>
+              <option value="NORMAL_AC">Normal AC</option>
+              <option value="NORMAL_NON_AC">Normal Non AC</option>
+            </select>
 
-            <label htmlFor="time">Time</label>
-            <input
-              id="time"
-              name="time"
-              type="time"
-              value={searchForm.time}
-              onChange={handleSearchChange}
-              required
-            />
-
-            <button type="submit" className="primary-btn">
-              Search Available Buses
-            </button>
-            <button type="button" className="ghost-btn" onClick={() => {
-              // show all upcoming buses
-              getRoutes()
-                .then((routes) => {
-                  const results = (routes || []).map((r) => {
-                    const bus = r.bus || {};
-                    let routeDate = r.travelDate || "";
-                    let depTime = "";
-                    let arrTime = "";
-                    if (!routeDate && r.departureTime) {
-                      const d = new Date(r.departureTime);
-                      routeDate = d.toISOString().slice(0, 10);
-                      depTime = d.toTimeString().slice(0, 5);
-                    } else if (r.departureTime) {
-                      const d = new Date(r.departureTime);
-                      depTime = d.toTimeString().slice(0, 5);
-                    }
-                    if (r.arrivalTime) {
-                      const a = new Date(r.arrivalTime);
-                      arrTime = a.toTimeString().slice(0, 5);
-                    }
-                    return {
-                      id: r.routeId,
-                      operator: bus.busName || bus.busNumber || "Operator",
-                      source: r.source,
-                      destination: r.destination,
-                      date: routeDate,
-                      time: depTime,
-                      arrival: arrTime,
-                      fare: r.fare,
-                      seatsAvailable: bus.totalSeats || 0,
-                      raw: r,
-                    };
-                  });
-                  setAvailableBuses(results);
-                  setSearchDone(true);
-                })
-                .catch(() => setAvailableBuses([]));
-            }}>Show all upcoming buses</button>
+            <div className="form-row full-row dashboard-form-actions">
+              <button className="btn-primary" type="submit" disabled={loading}>
+                {loading ? "Searching…" : "Search Available Buses"}
+              </button>
+              <button type="button" className="ghost-btn" onClick={resetSearch}>
+                Clear
+              </button>
+              <button type="button" className="secondary-btn" onClick={refreshAll}>
+                Refresh All
+              </button>
+            </div>
           </form>
         </section>
 
-        <section className="panel-block">
-          <h2>2. Available Buses</h2>
-          {!searchDone ? <p className="muted-text">Search to view buses.</p> : null}
-          {searchDone && availableBuses.length === 0 ? (
-            <p className="muted-text">No buses found for the selected criteria.</p>
-          ) : null}
-
-          <div className="bus-list">
-            {availableBuses.map((bus) => (
-              <article className="bus-item" key={bus.id}>
-                <div>
-                  <h3>
-                    {bus.operator} ({bus.id})
-                  </h3>
-                  <p>
-                    {bus.source} to {bus.destination} | {bus.date} | {bus.time} to {" "}
-                    {bus.arrival}
-                  </p>
-                  <p>
-                    Fare: Rs. {bus.fare} | Seats Available: {bus.seatsAvailable}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className={selectedBusId === bus.id ? "secondary-btn selected" : "secondary-btn"}
-                  onClick={() => handleSelectBus(bus.id)}
-                >
-                  {selectedBusId === bus.id ? "Selected" : "Select Bus"}
-                </button>
-              </article>
-            ))}
+        <section className="panel-card dashboard-section">
+          <div className="section-head">
+            <div>
+              <h2>Available Buses</h2>
+              <p>{results.length} bus route(s) available</p>
+            </div>
           </div>
-        </section>
 
-        {selectedBus ? (
-          <section className="panel-block">
-            <h2>3. Select Seats</h2>
-            <p className="muted-text">Choose up to 6 seats.</p>
-            <div className="seat-grid">
-              {Array.from({ length: 24 }, (_, index) => index + 1).map((seatNo) => (
-                <button
-                  key={seatNo}
-                  type="button"
-                  className={selectedSeats.includes(seatNo) ? "seat-btn active" : "seat-btn"}
-                  onClick={() => toggleSeat(seatNo)}
-                >
-                  {seatNo}
-                </button>
-              ))}
-            </div>
-          </section>
-        ) : null}
+          {loading && <p className="section-note">Loading buses…</p>}
 
-        {selectedBus && selectedSeats.length > 0 ? (
-          <section className="panel-block">
-            <h2>4. Booking & Payment</h2>
-            <div className="summary-box">
-              <p>
-                <strong>Bus:</strong> {selectedBus.operator} ({selectedBus.id})
-              </p>
-              <p>
-                <strong>Route:</strong> {selectedBus.source} to {selectedBus.destination}
-              </p>
-              <p>
-                <strong>Seats:</strong> {selectedSeats.join(", ")}
-              </p>
-              <p>
-                <strong>Total Amount:</strong> Rs. {totalFare}
-              </p>
-            </div>
-
-            <form className="payment-grid" onSubmit={handlePayment}>
-              <label htmlFor="cardName">Card Holder Name</label>
-              <input
-                id="cardName"
-                name="cardName"
-                type="text"
-                value={paymentData.cardName}
-                onChange={handlePaymentChange}
-                required
-              />
-
-              <label htmlFor="cardNumber">Card Number</label>
-              <input
-                id="cardNumber"
-                name="cardNumber"
-                type="text"
-                maxLength={19} /* 16 digits + 3 spaces when grouped */
-                value={paymentData.cardNumber}
-                onChange={handlePaymentChange}
-                required
-              />
-              <div aria-live="polite">
-                {String(paymentData.cardNumber).replace(/\D/g, "").length === 16 ? (
-                  <small style={{ color: "#1f6a49", fontWeight: 700 }}>Card number valid</small>
-                ) : (
-                  <small style={{ color: "#b33939", fontWeight: 700 }}>Card number must be 16 digits</small>
-                )}
-              </div>
-
-              <label htmlFor="expiry">Expiry (MM/YY)</label>
-              <input
-                id="expiry"
-                name="expiry"
-                type="text"
-                placeholder="MM/YY"
-                pattern="(0[1-9]|1[0-2])/[0-9]{2}"
-                maxLength={5}
-                value={paymentData.expiry}
-                onChange={handlePaymentChange}
-                required
-              />
-
-              <label htmlFor="cvv">CVV</label>
-              <input
-                id="cvv"
-                name="cvv"
-                type="password"
-                pattern="[0-9]{3}"
-                maxLength={3}
-                value={paymentData.cvv}
-                onChange={handlePaymentChange}
-                required
-              />
-
-              <button type="submit" className="primary-btn">
-                Pay Rs. {totalFare}
-              </button>
-            </form>
-
-            {paymentError ? <div className="admin-alert admin-alert-error" style={{ marginTop: 10 }}>{paymentError}</div> : null}
-
-            {paymentSuccess ? (
-              <div className="success-note" role="status" aria-live="polite">
-                Payment done successfully. Your booking is confirmed.
-              </div>
-            ) : null}
-          </section>
-        ) : null}
-
-          <section className="panel-block">
-            <h2>My Bookings</h2>
-            {bookings.length === 0 ? (
-              <p className="muted-text">You have no bookings yet.</p>
-            ) : (
-              <table className="table">
+          {!loading && results.length === 0 ? (
+            <p className="section-note">No buses available.</p>
+          ) : (
+            <div className="table-wrap dashboard-table">
+              <table>
                 <thead>
                   <tr>
-                    <th>Booking ID</th>
-                    <th>Bus</th>
                     <th>Route</th>
-                    <th>Seats</th>
-                    <th>Amount</th>
-                    <th>Status</th>
                     <th>Date</th>
-                    <th>Action</th>
+                    <th>Departure</th>
+                    <th>Arrival</th>
+                    <th>Bus Type</th>
+                    <th>Fare</th>
+                    <th>Bus</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {bookings.map((b) => (
-                    <tr key={b.id}>
-                      <td>{b.id}</td>
-                      <td>{b.bus?.operator || b.busId}</td>
-                      <td>
-                        {b.route?.source || ""} to {b.route?.destination || ""}
-                      </td>
-                      <td>{Array.isArray(b.seats) ? b.seats.join(", ") : b.seats}</td>
-                      <td>Rs. {b.amount}</td>
-                      <td>{b.status || "-"}</td>
-                      <td>{new Date(b.createdAt || b.date || Date.now()).toLocaleString()}</td>
-                      <td>
-                        <button className="secondary-btn" onClick={() => handleCancel(b.id)}>
-                          Cancel
+                  {results.map((route) => (
+                    <tr key={route.routeId}>
+                      <td>{route.source} → {route.destination}</td>
+                      <td>{route.travelDate}</td>
+                      <td>{route.departureTime}</td>
+                      <td>{route.arrivalTime}</td>
+                      <td>{route.bus?.busType || route.busType || "-"}</td>
+                      <td>{Number(route.fare ?? 0).toFixed(2)}</td>
+                      <td>{route.bus?.busName || "-"}</td>
+                      <td className="table-actions">
+                        <button
+                          type="button"
+                          className="secondary-btn"
+                          onClick={() => setSelectedRoute(route)}
+                        >
+                          View Seats
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-primary"
+                          onClick={() => setSelectedRoute(route)}
+                        >
+                          Book Seat
                         </button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            )}
-          </section>
-      </section>
+            </div>
+          )}
+        </section>
+
+        <section className="panel-card dashboard-section">
+          <div className="section-head">
+            <div>
+              <h2>My Bookings</h2>
+              <p>Your booked seats and payment history</p>
+            </div>
+          </div>
+
+          {myBookings.length === 0 ? (
+            <div className="empty-state">
+              <strong>No bookings yet</strong>
+              <span>After you book and pay, the trip will appear here automatically.</span>
+            </div>
+          ) : (
+            <div className="table-wrap dashboard-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Booking ID</th>
+                    <th>Route</th>
+                    <th>Seats</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {myBookings.map((booking) => (
+                    <tr key={booking.bookingId}>
+                      <td>{booking.bookingId}</td>
+                      <td>
+                        {booking.route?.source} → {booking.route?.destination} ({booking.route?.travelDate})
+                      </td>
+                      <td>
+                        {(booking.seats || booking.bookingSeats || [])
+                          .map((seat) => seat.seatNumber || seat.seat?.seatNumber)
+                          .filter(Boolean)
+                          .join(", ") || "-"}
+                      </td>
+                      <td>{Number(booking.totalAmount || 0).toFixed(2)}</td>
+                      <td>
+                        <span className={`status-pill status-${String(booking.status || "").toLowerCase()}`}>
+                          {booking.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        {selectedRoute && (
+          <SeatSelector
+            route={selectedRoute}
+            onClose={() => setSelectedRoute(null)}
+            onBooked={async () => {
+              await loadMyBookings();
+              setMessage("Booking created. Check My Bookings below.");
+            }}
+          />
+        )}
+      </div>
     </main>
   );
 }

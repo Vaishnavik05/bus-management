@@ -7,6 +7,7 @@ import UserDashboardPage from "./pages/UserDashboardPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 import MyBookingsPage from "./pages/MyBookingsPage";
+import PaymentPage from "./pages/PaymentPage";
 
 function PublicOnlyRoute({ children }) {
   const { isAuthenticated, user } = useAuth();
@@ -50,6 +51,7 @@ export default function App() {
       </Route>
 
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
+      <Route path="/payment" element={<PaymentPage />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

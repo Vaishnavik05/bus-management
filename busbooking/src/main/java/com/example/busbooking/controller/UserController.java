@@ -1,7 +1,6 @@
 package com.example.busbooking.controller;
 
 import com.example.busbooking.entity.User;
-import com.example.busbooking.enums.Role;
 import com.example.busbooking.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -13,50 +12,35 @@ import java.util.List;
 @RequestMapping("/api/users")
 public class UserController {
 
-	@Autowired
-	private UserRepository repo;
+    @Autowired
+    private UserRepository repo;
 
-	@GetMapping
-	public List<User> getAll() {
-		return repo.findAll();
-	}
+    @GetMapping
+    public List<User> getAll() {
+        return repo.findAll();
+    }
 
-	@GetMapping("/{id}")
-	public User getById(@PathVariable Long id) {
-		return repo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-	}
+    @GetMapping("/{id}")
+    public User getById(@PathVariable Long id) {
+        return repo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+    }
 
-	@PutMapping("/{id}")
-	public User updateUser(@PathVariable Long id, @RequestBody User updated) {
-		User existing = repo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-		existing.setFullName(updated.getFullName());
-		existing.setEmail(updated.getEmail());
-		existing.setPhone(updated.getPhone());
-		if (updated.getRole() != null) {
-			existing.setRole(updated.getRole());
-		}
-		existing.setBlocked(updated.isBlocked());
-		return repo.save(existing);
-	}
+    @PutMapping("/{id}")
+    public User updateUser(@PathVariable Long id, @RequestBody User updated) {
+        User existing = repo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        existing.setFullName(updated.getFullName());
+        existing.setEmail(updated.getEmail());
+        existing.setPhone(updated.getPhone());
+        if (updated.getRole() != null) {
+            existing.setRole(updated.getRole());
+        }
+        return repo.save(existing);
+    }
 
-	@PutMapping("/{id}/block")
-	public User blockUser(@PathVariable Long id) {
-		User existing = repo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-		existing.setBlocked(true);
-		return repo.save(existing);
-	}
-
-	@PutMapping("/{id}/unblock")
-	public User unblockUser(@PathVariable Long id) {
-		User existing = repo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-		existing.setBlocked(false);
-		return repo.save(existing);
-	}
-
-	@DeleteMapping("/{id}")
-	public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
-		User existing = repo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-		repo.delete(existing);
-		return ResponseEntity.noContent().build();
-	}
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+        User existing = repo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        repo.delete(existing);
+        return ResponseEntity.noContent().build();
+    }
 }
