@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getMyBookings } from "../services/userApi";
+import { getMyBookings, cancelBooking, getReceipt } from "../services/userApi";
 import { useAuth } from "../context/AuthContext";
+import SeatSelector from "../components/SeatSelector";
+import "../styles/user.css";
 
 async function fetchAllRoutes() {
   const res = await fetch("/api/routes", {
@@ -35,12 +37,29 @@ export default function UserDashboardPage() {
   const navigate = useNavigate();
   const { logout } = useAuth();
 
-  async function loadMyBookings() {
+  async function loadRoutes() {
+    const routesData = await fetchAllRoutes();
+    const safeRoutes = Array.isArray(routesData) ? routesData : [];
+    setAllRoutes(safeRoutes);
+    setResults(safeRoutes);
+  }
+
+  async function loadBookings() {
+    const bookingsData = await getMyBookings();
+    setMyBookings(Array.isArray(bookingsData) ? bookingsData : []);
+  }
+
+  async function handleRefreshAll() {
+    setLoading(true);
+    setError("");
+    setMessage("");
     try {
-      const data = await getMyBookings();
-      setMyBookings(Array.isArray(data) ? data : []);
+      await Promise.all([loadRoutes(), loadBookings()]);
+      setMessage("All data refreshed.");
     } catch (err) {
-      setError(err.message || "Unable to load bookings");
+      setError(err.message || "Unable to refresh data");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -63,8 +82,9 @@ export default function UserDashboardPage() {
         ]);
 
         if (!mounted) return;
-        setAllRoutes(routesData || []);
-        setResults(routesData || []);
+        const safeRoutes = Array.isArray(routesData) ? routesData : [];
+        setAllRoutes(safeRoutes);
+        setResults(safeRoutes);
         setMyBookings(Array.isArray(bookingsData) ? bookingsData : []);
       } catch (err) {
         if (!mounted) return;
@@ -123,17 +143,110 @@ export default function UserDashboardPage() {
     setResults(allRoutes);
   }
 
-  function refreshAll() {
-    setResults(allRoutes);
-    setForm({ source: "", destination: "", date: "", busType: "" });
-    setMessage("Showing all buses.");
+  function canCancel(status) {
+    const s = String(status || "").toUpperCase();
+    return s === "BOOKED" || s === "CONFIRMED" || s === "PAID" || s === "PENDING";
+  }
+
+  async function handleCancelBooking(bookingId) {
+    const ok = window.confirm("Do you want to cancel this booking?");
+    if (!ok) return;
+
+    try {
+      await cancelBooking(bookingId);
+      setMyBookings((prev) => prev.filter((b) => b.bookingId !== bookingId));
+      setMessage("Booking cancelled. Your money will be refunded within 2 days.");
+      setError("");
+    } catch (err) {
+      setError(err?.response?.data?.message || err.message || "Unable to cancel booking");
+    }
+  }
+
+  async function handleDownloadReceipt(bookingId) {
+    const booking = myBookings.find((b) => b.bookingId === bookingId);
+
+    try {
+      const receipt = await getReceipt(bookingId);
+
+      if (receipt?.url) {
+        const a = document.createElement("a");
+        a.href = receipt.url;
+        a.target = "_blank";
+        a.rel = "noreferrer";
+        a.download = `receipt-${bookingId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setMessage("Receipt downloaded successfully.");
+        setError("");
+        return;
+      }
+
+      const html =
+        typeof receipt === "string" && receipt.trim()
+          ? receipt
+          : buildReceiptHtml(booking);
+
+      downloadFromText(`receipt-${bookingId}.html`, html);
+      setMessage("Receipt downloaded successfully.");
+      setError("");
+    } catch {
+      const html = buildReceiptHtml(booking);
+      downloadFromText(`receipt-${bookingId}.html`, html);
+      setMessage("Receipt downloaded successfully.");
+      setError("");
+    }
+  }
+
+  function buildReceiptHtml(booking) {
+    const seats = (booking?.seats || booking?.bookingSeats || [])
+      .map((s) => s.seatNumber || s.seat?.seatNumber)
+      .filter(Boolean)
+      .join(", ") || "-";
+
+    return `
+      <html>
+        <head>
+          <meta charset="UTF-8" />
+          <title>Receipt #${booking?.bookingId || ""}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 24px; color: #1f2f3a; }
+            h1 { margin-bottom: 8px; }
+            .row { margin: 8px 0; }
+            .label { color: #5a6d77; width: 140px; display: inline-block; }
+          </style>
+        </head>
+        <body>
+          <h1>Bus Booking Receipt</h1>
+          <div class="row"><span class="label">Booking ID:</span><strong>${booking?.bookingId ?? "-"}</strong></div>
+          <div class="row"><span class="label">Route:</span>${booking?.route?.source ?? "-"} → ${booking?.route?.destination ?? "-"}</div>
+          <div class="row"><span class="label">Travel Date:</span>${booking?.route?.travelDate ?? "-"}</div>
+          <div class="row"><span class="label">Seats:</span>${seats}</div>
+          <div class="row"><span class="label">Amount:</span>${Number(booking?.totalAmount || 0).toFixed(2)}</div>
+          <div class="row"><span class="label">Status:</span>${booking?.status ?? "-"}</div>
+        </body>
+      </html>
+    `;
   }
 
   const bookingCount = myBookings.length;
-  const confirmedCount = myBookings.filter((booking) =>
-    String(booking.status || "").toUpperCase() === "BOOKED"
-  ).length;
+  const confirmedCount = myBookings.filter((booking) => {
+    const status = String(booking.status || "").toUpperCase();
+    return status === "BOOKED" || status === "CONFIRMED";
+  }).length;
   const latestBooking = myBookings[0];
+
+  function downloadFromText(filename, content, mimeType = "text/html;charset=utf-8") {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <main className="dash-shell user-shell">
@@ -160,8 +273,8 @@ export default function UserDashboardPage() {
         </div>
 
         <section className="dashboard-hero panel-card">
-          <div className="dashboard-hero-top">
-            <div>
+          <div className="dashboard-hero-top dashboard-top-row">
+            <div className="dashboard-title-wrap">
               <div className="dashboard-badge">User Dashboard</div>
               <h1 className="dashboard-title">Plan, book, and track your trips in one place</h1>
               <p className="dashboard-subtitle">
@@ -169,12 +282,9 @@ export default function UserDashboardPage() {
               </p>
             </div>
 
-            <div className="dashboard-actions">
-              <button type="button" className="secondary-btn" onClick={refreshAll}>
-                Refresh routes
-              </button>
-              <button type="button" className="ghost-btn" onClick={() => loadMyBookings()}>
-                Refresh bookings
+            <div className="dashboard-header-actions">
+              <button type="button" className="secondary-btn" onClick={handleRefreshAll} disabled={loading}>
+                {loading ? "Refreshing..." : "Refresh All"}
               </button>
               <button
                 type="button"
@@ -217,7 +327,7 @@ export default function UserDashboardPage() {
             </div>
           </div>
 
-          <form className="user-search-form" onSubmit={handleSearch}>
+          <form className="user-search-form search-filters-one-line" onSubmit={handleSearch}>
             <input
               placeholder="Source (e.g. Chennai)"
               value={form.source}
@@ -246,13 +356,10 @@ export default function UserDashboardPage() {
 
             <div className="form-row full-row dashboard-form-actions">
               <button className="btn-primary" type="submit" disabled={loading}>
-                {loading ? "Searching…" : "Search Available Buses"}
+                {loading ? "Searching..." : "Search Available Buses"}
               </button>
               <button type="button" className="ghost-btn" onClick={resetSearch}>
                 Clear
-              </button>
-              <button type="button" className="secondary-btn" onClick={refreshAll}>
-                Refresh All
               </button>
             </div>
           </form>
@@ -266,58 +373,74 @@ export default function UserDashboardPage() {
             </div>
           </div>
 
-          {loading && <p className="section-note">Loading buses…</p>}
-
-          {!loading && results.length === 0 ? (
-            <p className="section-note">No buses available.</p>
-          ) : (
-            <div className="table-wrap dashboard-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Route</th>
-                    <th>Date</th>
-                    <th>Departure</th>
-                    <th>Arrival</th>
-                    <th>Bus Type</th>
-                    <th>Fare</th>
-                    <th>Bus</th>
-                    <th>Actions</th>
+          <div className="table-wrap dashboard-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Route</th>
+                  <th>Date</th>
+                  <th>Departure</th>
+                  <th>Arrival</th>
+                  <th>Bus Type</th>
+                  <th>Fare</th>
+                  <th>Bus</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {results.map((route) => (
+                  <tr key={route.routeId}>
+                    <td>{route.source} → {route.destination}</td>
+                    <td>{route.travelDate}</td>
+                    <td>{route.departureTime}</td>
+                    <td>{route.arrivalTime}</td>
+                    <td>{route.bus?.busType || route.busType || "-"}</td>
+                    <td>{Number(route.fare ?? 0).toFixed(2)}</td>
+                    <td>{route.bus?.busName || "-"}</td>
+                    <td className="table-actions">
+                      <button
+                        type="button"
+                        className="secondary-btn"
+                        onClick={() => setSelectedRoute(route)}
+                      >
+                        View Seats
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        onClick={() => setSelectedRoute(route)}
+                      >
+                        Book Seat
+                      </button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {results.map((route) => (
-                    <tr key={route.routeId}>
-                      <td>{route.source} → {route.destination}</td>
-                      <td>{route.travelDate}</td>
-                      <td>{route.departureTime}</td>
-                      <td>{route.arrivalTime}</td>
-                      <td>{route.bus?.busType || route.busType || "-"}</td>
-                      <td>{Number(route.fare ?? 0).toFixed(2)}</td>
-                      <td>{route.bus?.busName || "-"}</td>
-                      <td className="table-actions">
-                        <button
-                          type="button"
-                          className="secondary-btn"
-                          onClick={() => setSelectedRoute(route)}
-                        >
-                          View Seats
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-primary"
-                          onClick={() => setSelectedRoute(route)}
-                        >
-                          Book Seat
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
+
+        {selectedRoute && (
+          <section className="panel-card seat-panel-wrapper">
+            <div className="section-head">
+              <div>
+                <h2>Seat Selection</h2>
+                <p>
+                  {selectedRoute.source} → {selectedRoute.destination} ({selectedRoute.travelDate})
+                </p>
+              </div>
+              <button type="button" className="ghost-btn" onClick={() => setSelectedRoute(null)}>
+                Close
+              </button>
+            </div>
+
+            <SeatSelector
+              route={selectedRoute}
+              inline
+              onClose={() => setSelectedRoute(null)}
+            />
+          </section>
+        )}
 
         <section className="panel-card dashboard-section">
           <div className="section-head">
@@ -342,6 +465,7 @@ export default function UserDashboardPage() {
                     <th>Seats</th>
                     <th>Amount</th>
                     <th>Status</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -363,6 +487,27 @@ export default function UserDashboardPage() {
                           {booking.status}
                         </span>
                       </td>
+                      <td className="table-actions">
+                        <button
+                          type="button"
+                          className="secondary-btn"
+                          onClick={() => handleDownloadReceipt(booking.bookingId)}
+                        >
+                          Download Receipt
+                        </button>
+
+                        {canCancel(booking.status) ? (
+                          <button
+                            type="button"
+                            className="danger-btn"
+                            onClick={() => handleCancelBooking(booking.bookingId)}
+                          >
+                            Cancel
+                          </button>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -370,17 +515,6 @@ export default function UserDashboardPage() {
             </div>
           )}
         </section>
-
-        {selectedRoute && (
-          <SeatSelector
-            route={selectedRoute}
-            onClose={() => setSelectedRoute(null)}
-            onBooked={async () => {
-              await loadMyBookings();
-              setMessage("Booking created. Check My Bookings below.");
-            }}
-          />
-        )}
       </div>
     </main>
   );

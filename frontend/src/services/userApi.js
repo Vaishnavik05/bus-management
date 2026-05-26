@@ -54,6 +54,62 @@ export async function getMyBookings() {
 }
 
 export async function getReceipt(bookingId) {
-  const { data } = await api.get(`/bookings/${bookingId}/receipt`);
-  return data;
+  const attempts = [
+    () => api.get(`/bookings/${bookingId}/receipt`),
+    () => api.get(`/bookings/${bookingId}/receipt/download`),
+    () => api.get(`/bookings/receipt/${bookingId}`),
+    () => api.get(`/bookings/${bookingId}/ticket`),
+  ];
+
+  let lastError;
+
+  for (const attempt of attempts) {
+    try {
+      const { data } = await attempt();
+      return data;
+    } catch (err) {
+      lastError = err;
+      const status = err?.response?.status;
+      const shouldTryNext =
+        !status || status === 404 || status === 405 || (status >= 500 && status <= 599);
+
+      if (!shouldTryNext) {
+        throw err;
+      }
+    }
+  }
+
+  throw lastError || new Error("Unable to fetch receipt");
+}
+
+// NEW: cancel booking
+export async function cancelBooking(bookingId) {
+  const attempts = [
+    () => api.post(`/bookings/${bookingId}/cancel`),
+    () => api.patch(`/bookings/${bookingId}/cancel`),
+    () => api.put(`/bookings/${bookingId}/cancel`),
+    () => api.delete(`/bookings/${bookingId}`),
+    () => api.post(`/bookings/cancel/${bookingId}`),
+  ];
+
+  let lastError;
+
+  for (const attempt of attempts) {
+    try {
+      const { data } = await attempt();
+      return data;
+    } catch (err) {
+      lastError = err;
+      const status = err?.response?.status;
+
+      const shouldTryNext =
+        !status || status === 404 || status === 405 || (status >= 500 && status <= 599);
+
+      if (!shouldTryNext) {
+        throw err;
+      }
+    }
+  }
+
+  throw lastError || new Error("Unable to cancel booking");
 }
