@@ -1,8 +1,9 @@
 package com.example.busbooking.entity;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Entity
 public class Route {
@@ -14,10 +15,14 @@ public class Route {
     private String source;
     private String destination;
 
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate travelDate;
 
-    private LocalDateTime departureTime;
-    private LocalDateTime arrivalTime;
+    @JsonFormat(pattern = "HH:mm")
+    private LocalTime departureTime;
+
+    @JsonFormat(pattern = "HH:mm")
+    private LocalTime arrivalTime;
 
     private double fare;
 
@@ -57,19 +62,19 @@ public class Route {
         this.travelDate = travelDate;
     }
 
-    public LocalDateTime getDepartureTime() {
+    public LocalTime getDepartureTime() {
         return departureTime;
     }
 
-    public void setDepartureTime(LocalDateTime departureTime) {
+    public void setDepartureTime(LocalTime departureTime) {
         this.departureTime = departureTime;
     }
 
-    public LocalDateTime getArrivalTime() {
+    public LocalTime getArrivalTime() {
         return arrivalTime;
     }
 
-    public void setArrivalTime(LocalDateTime arrivalTime) {
+    public void setArrivalTime(LocalTime arrivalTime) {
         this.arrivalTime = arrivalTime;
     }
 

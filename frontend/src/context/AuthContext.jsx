@@ -72,7 +72,20 @@ function extractToken(data) {
 }
 
 function extractUser(data, token) {
-  return normalizeUser(data?.user || decodeJwt(token));
+  const responseUser =
+    data?.user && typeof data.user === "object" ? data.user : {};
+
+  const profile =
+    data?.profile && typeof data.profile === "object" ? data.profile : {};
+
+  const jwtPayload = decodeJwt(token) || {};
+
+  return normalizeUser({
+    ...jwtPayload,
+    ...profile,
+    ...responseUser,
+    role: data?.role || profile.role || responseUser.role || jwtPayload.role,
+  });
 }
 
 export function AuthProvider({ children }) {
@@ -124,6 +137,7 @@ export function AuthProvider({ children }) {
         phone: formData.phone,
         role: formData.role,
       });
+
       const nextToken = extractToken(data);
 
       if (!nextToken) {

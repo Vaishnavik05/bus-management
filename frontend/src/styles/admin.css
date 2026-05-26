@@ -1,0 +1,603 @@
+.admin-shell {
+  min-height: 100vh;
+  padding: 28px 18px 40px;
+  background:
+    radial-gradient(circle at top left, rgba(14, 122, 130, 0.08), transparent 32%),
+    radial-gradient(circle at top right, rgba(34, 65, 83, 0.06), transparent 28%),
+    linear-gradient(180deg, #f6fbfc 0%, #edf4f6 100%);
+}
+
+.admin-dashboard-card,
+.admin-grid-shell {
+  width: min(100%, 1500px);
+}
+
+.admin-dashboard-card {
+  padding: 28px;
+  border-radius: 28px;
+  border: 1px solid rgba(14, 122, 130, 0.12);
+  box-shadow: 0 24px 70px rgba(20, 41, 54, 0.10);
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(10px);
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding-bottom: 18px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(15, 70, 78, 0.10);
+}
+
+.admin-header h1 {
+  margin: 0 0 10px;
+  font-size: clamp(2rem, 3vw, 2.8rem);
+  letter-spacing: -0.03em;
+  color: #16323d;
+}
+
+.admin-header p {
+  margin: 6px 0;
+  color: #4a6770;
+}
+
+.admin-actions-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.admin-panel,
+.admin-panel-full {
+  display: grid;
+  gap: 20px;
+}
+
+.panel-card {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 252, 253, 0.92));
+  border: 1px solid rgba(14, 122, 130, 0.12);
+  border-radius: 24px;
+  padding: 22px;
+  box-shadow: 0 18px 45px rgba(20, 41, 54, 0.08);
+}
+
+.panel-card h2 {
+  margin: 0 0 16px;
+  font-size: 1.35rem;
+  letter-spacing: -0.02em;
+  color: #18333e;
+}
+
+.panel-card h2::after {
+  content: "";
+  display: block;
+  width: 56px;
+  height: 4px;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+}
+
+.admin-alert {
+  border-radius: 16px;
+  padding: 14px 16px;
+  font-weight: 600;
+  margin-top: 10px;
+}
+
+.admin-alert-error {
+  background: rgba(192, 57, 43, 0.08);
+  color: #9f2f23;
+  border: 1px solid rgba(192, 57, 43, 0.18);
+}
+
+.admin-alert-success {
+  background: rgba(46, 125, 50, 0.08); /* soft green */
+  color: #2e7d32;                        /* green text */
+  border: 1px solid rgba(46, 125, 50, 0.18);
+}
+
+.admin-form {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(245, 250, 251, 0.9), rgba(255, 255, 255, 0.95));
+  border: 1px solid rgba(14, 122, 130, 0.10);
+}
+
+.admin-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.full-row {
+  grid-column: 1 / -1;
+}
+
+.admin-form input,
+.admin-form select {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid #c8d8dd;
+  background: #fff;
+  color: #18333e;
+  outline: none;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease, background 180ms ease;
+}
+
+.admin-form input::placeholder {
+  color: #7f959d;
+}
+
+.admin-form input:focus,
+.admin-form select:focus {
+  border-color: rgba(14, 122, 130, 0.55);
+  box-shadow: 0 0 0 4px rgba(14, 122, 130, 0.10);
+}
+
+.form-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.form-row button,
+.admin-form button,
+.logout-btn,
+.ghost-btn,
+.table-actions button {
+  min-height: 42px;
+  border-radius: 12px;
+  font-weight: 700;
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+
+.logout-btn {
+  padding: 11px 16px;
+  border: none;
+  box-shadow: 0 10px 22px rgba(14, 122, 130, 0.20);
+}
+
+.ghost-btn {
+  background: #fff;
+  color: var(--accent-dark);
+  border: 1px solid rgba(14, 122, 130, 0.22);
+}
+
+.ghost-btn:hover,
+.logout-btn:hover,
+.table-actions button:hover,
+.form-row button:hover,
+.admin-form button:hover {
+  transform: translateY(-1px);
+}
+
+.table-wrap {
+  overflow: auto;
+  border-radius: 18px;
+  border: 1px solid rgba(15, 70, 78, 0.10);
+  background: #fff;
+  box-shadow: 0 14px 30px rgba(20, 41, 54, 0.05);
+}
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+th,
+td {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(15, 70, 78, 0.08);
+  text-align: left;
+  vertical-align: middle;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, #f8fbfc, #f2f7f8);
+  font-size: 0.88rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #58727a;
+}
+
+tbody tr:hover td {
+  background: rgba(14, 122, 130, 0.03);
+}
+
+.table-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.admin-box {
+  padding: 18px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(14, 122, 130, 0.06), rgba(255, 255, 255, 0.95));
+  border: 1px solid rgba(14, 122, 130, 0.10);
+  box-shadow: 0 10px 24px rgba(20, 41, 54, 0.06);
+}
+
+.admin-box h3 {
+  margin: 0 0 8px;
+  color: #52717a;
+  font-size: 0.95rem;
+}
+
+.admin-box p {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #17323d;
+}
+
+@media (max-width: 960px) {
+  .admin-form-grid,
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-shell {
+    padding: 18px 12px 28px;
+  }
+
+  .admin-dashboard-card {
+    padding: 18px;
+    border-radius: 22px;
+  }
+
+  .panel-card {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .admin-header {
+    padding-bottom: 14px;
+  }
+
+  .admin-actions-row,
+  .form-row,
+  .table-actions {
+    width: 100%;
+  }
+
+  .admin-actions-row button,
+  .form-row button {
+    flex: 1 1 140px;
+  }
+}
+
+/* Toast container — top-right */
+.admin-toast-area {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  pointer-events: none; /* container doesn't block page clicks */
+  max-width: 420px;
+  width: auto;
+}
+
+/* Per-toast wrapper */
+.admin-toast {
+  pointer-events: auto; /* allow interacting with close button */
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  box-shadow: 0 18px 40px rgba(20, 41, 54, 0.12);
+  animation: adminToastIn 220ms cubic-bezier(.2,.9,.2,1);
+  min-width: 220px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Text area */
+.toast-content {
+  flex: 1 1 auto;
+  color: #0b513f; /* dark green text for success - overridden by .admin-alert-success below */
+  font-weight: 600;
+}
+
+/* Close (×) button */
+.toast-close {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 18px;
+  line-height: 1;
+  padding: 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  opacity: 0.9;
+  transition: background 140ms ease, transform 120ms ease;
+}
+
+.toast-close:hover {
+  background: rgba(0,0,0,0.04);
+  transform: translateY(-1px);
+}
+
+/* Progress bar (animated left → right shrink) */
+.toast-progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 4px;
+  background: linear-gradient(90deg, rgba(14,122,130,0.9), rgba(14,122,130,0.6));
+  width: 100%;
+  animation: toastProgress 3s linear forwards;
+}
+
+/* Animations */
+@keyframes adminToastIn {
+  from { opacity: 0; transform: translateY(-8px) scale(0.99); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes toastProgress {
+  from { transform: translateX(0%); width: 100%; }
+  to   { transform: translateX(100%); width: 0%; }
+}
+
+/* Success / Error color tokens */
+.admin-alert-success {
+  background: rgba(46, 125, 50, 0.08); /* soft green background */
+  color: #2e7d32;                       /* green text */
+  border: 1px solid rgba(46, 125, 50, 0.16);
+}
+
+.admin-alert-error {
+  background: rgba(192, 57, 43, 0.08);
+  color: #9f2f23;
+  border: 1px solid rgba(192, 57, 43, 0.16);
+}
+
+/* Small screens: center toasts */
+@media (max-width: 640px) {
+  .admin-toast-area {
+    left: 12px;
+    right: 12px;
+    top: 12px;
+    align-items: center;
+  }
+}
+
+/* Button color system */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  font-weight: 700;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
+  border: 1px solid transparent;
+}
+
+/* Primary (forms, main actions) */
+.primary-btn {
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  color: #fff;
+  border-color: rgba(0,0,0,0.06);
+  box-shadow: 0 10px 22px rgba(14,122,130,0.18);
+}
+
+/* Secondary (neutral / edit) */
+.secondary-btn {
+  background: #fff;
+  color: var(--accent-dark);
+  border-color: rgba(14,122,130,0.14);
+  box-shadow: none;
+}
+
+/* Ghost (clear/low priority) */
+.ghost-btn {
+  background: #fff;
+  color: var(--accent-dark);
+  border-color: rgba(14, 122, 130, 0.22);
+  box-shadow: none;
+}
+
+/* Danger (delete/cancel) */
+.danger-btn {
+  background: #fff;
+  color: #b03a33;
+  border-color: rgba(176,58,51,0.16);
+}
+
+/* Small hover lift */
+.btn:hover { transform: translateY(-2px); }
+
+/* Toast close uses subtle neutral button */
+.toast-close {
+  background: rgba(255,255,255,0.9);
+  color: var(--accent-dark);
+  border: 1px solid rgba(14,122,130,0.06);
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+.toast-close:hover { background: #fff; transform: translateY(-1px); }
+
+/* Optional small variant */
+.btn.small { padding: 6px 10px; font-size: 0.9rem; border-radius: 10px; }
+
+/* Button system — add near other button rules in src/styles/admin.css */
+
+/* Base button token (applies to most buttons) */
+.btn,
+.admin-form button,
+.auth-form button,
+.logout-btn,
+.secondary-btn,
+.ghost-btn,
+.danger-btn,
+.table-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 14px;
+  min-height: 40px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 140ms ease, background 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Primary (form submit, main actions) */
+.btn-primary,
+.admin-form button,
+.logout-btn {
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  border: none;
+  box-shadow: 0 10px 22px rgba(14, 122, 130, 0.18);
+}
+
+.btn-primary:hover,
+.admin-form button:hover,
+.logout-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(14, 122, 130, 0.20);
+}
+
+.btn-primary:focus,
+.admin-form button:focus,
+.logout-btn:focus {
+  outline: none;
+  box-shadow: 0 6px 18px rgba(14,122,130,0.18), 0 0 0 4px rgba(14,122,130,0.10);
+}
+
+/* Secondary (edit, neutral actions) */
+.secondary-btn,
+.table-actions .secondary-btn {
+  background: #ffffff;
+  color: var(--accent-dark);
+  border: 1px solid rgba(14, 122, 130, 0.14);
+  box-shadow: none;
+  padding: 8px 12px;
+}
+
+.secondary-btn:hover,
+.table-actions .secondary-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(14,122,130,0.03);
+}
+
+/* Ghost (clear, subtle) */
+.ghost-btn {
+  background: #fff;
+  color: var(--accent-dark);
+  border: 1px solid rgba(14, 122, 130, 0.22);
+  box-shadow: none;
+}
+
+.ghost-btn:hover {
+  background: rgba(14,122,130,0.02);
+  transform: translateY(-1px);
+}
+
+/* Danger (delete, cancel) */
+.danger-btn,
+.table-actions .danger-btn {
+  background: #fff;
+  color: #b03a33;
+  border: 1px solid rgba(176, 58, 51, 0.16);
+  padding: 8px 12px;
+}
+
+.danger-btn:hover,
+.table-actions .danger-btn:hover {
+  background: rgba(176,58,51,0.04);
+  transform: translateY(-1px);
+}
+
+/* Small / compact buttons used in tables */
+.table-actions button {
+  padding: 8px 10px;
+  min-height: 36px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+
+/* Disabled state */
+.btn[disabled],
+.admin-form button:disabled,
+.secondary-btn[disabled],
+.ghost-btn[disabled],
+.danger-btn[disabled],
+.logout-btn[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Utility: small inverse (if needed) */
+.btn-plain {
+  background: transparent;
+  color: var(--accent-dark);
+  border: none;
+  box-shadow: none;
+}
+
+/* Accessibility: visible focus for keyboard users */
+.btn:focus-visible,
+.secondary-btn:focus-visible,
+.ghost-btn:focus-visible,
+.danger-btn:focus-visible,
+.logout-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 6px 18px rgba(14,122,130,0.12), 0 0 0 4px rgba(14,122,130,0.08);
+}
+
+/* Responsive touch sizing */
+@media (max-width: 640px) {
+  .admin-form button,
+  .logout-btn,
+  .secondary-btn,
+  .ghost-btn,
+  .danger-btn,
+  .table-actions button {
+    padding: 10px 14px;
+    min-height: 44px;
+  }
+}

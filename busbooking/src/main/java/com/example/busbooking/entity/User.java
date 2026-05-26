@@ -24,8 +24,6 @@ public class User {
 
     private String phone;
 
-    private boolean blocked = false;
-
     private LocalDateTime createdAt = LocalDateTime.now();
 
     public Long getUserId() {
@@ -75,15 +73,6 @@ public class User {
     public void setPhone(String phone) {
         this.phone = phone;
     }
-
-    public boolean isBlocked() {
-        return blocked;
-    }
-
-    public void setBlocked(boolean blocked) {
-        this.blocked = blocked;
-    }
-
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }

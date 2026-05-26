@@ -1,17 +1,21 @@
 package com.example.busbooking.dto;
 
+import java.util.Map;
+
 public class AuthResponse {
 
     private String message;
     private String token;
     private String role;
-    private Object user;
+    private Map<String, Object> profile;
 
-    public AuthResponse(String message, String token, String role, Object user) {
+    public AuthResponse() {}
+
+    public AuthResponse(String message, String token, String role, Map<String, Object> profile) {
         this.message = message;
         this.token = token;
         this.role = role;
-        this.user = user;
+        this.profile = profile;
     }
 
     public String getMessage() {
@@ -38,11 +42,11 @@ public class AuthResponse {
         this.role = role;
     }
 
-    public Object getUser() {
-        return user;
+    public Map<String, Object> getProfile() {
+        return profile;
     }
 
-    public void setUser(Object user) {
-        this.user = user;
+    public void setProfile(Map<String, Object> profile) {
+        this.profile = profile;
     }
 }

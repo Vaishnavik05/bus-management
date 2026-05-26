@@ -6,8 +6,8 @@ public class RegisterRequest {
     private String fullName;
     private String email;
     private String password;
-    private String phone;
     private Role role;
+    private String phone;
 
     public String getFullName() {
         return fullName;
@@ -33,19 +33,19 @@ public class RegisterRequest {
         this.password = password;
     }
 
-    public String getPhone() {
-        return phone;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
     public Role getRole() {
         return role;
     }
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 }
