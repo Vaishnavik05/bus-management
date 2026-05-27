@@ -69,8 +69,37 @@ public class BookingController {
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestBody Map<String, Object> payload) {
 
-        User user = resolveUserFromAuthorization(authorization);
+        // Try resolve user from Authorization header first
+        User user = null;
+        try {
+            if (authorization != null && authorization.startsWith("Bearer ")) {
+                user = resolveUserFromAuthorization(authorization);
+            }
+        } catch (Exception e) {
+            user = null; // fall back to payload values below
+        }
 
+        // Fallback: allow client to supply userId or userEmail if header is missing
+        if (user == null) {
+            Object uid = payload.get("userId");
+            if (uid instanceof Number) {
+                user = userRepo.findById(((Number) uid).longValue()).orElse(null);
+            } else if (uid instanceof String) {
+                try {
+                    Long parsed = Long.parseLong((String) uid);
+                    user = userRepo.findById(parsed).orElse(null);
+                } catch (NumberFormatException ignored) { }
+            }
+            if (user == null && payload.get("userEmail") instanceof String) {
+                user = userRepo.findByEmail((String) payload.get("userEmail")).orElse(null);
+            }
+        }
+
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authenticated for booking");
+        }
+
+        // route resolution (unchanged)
         Object routeObj = payload.get("route");
         Long routeId = null;
         if (routeObj instanceof Map) {
@@ -137,6 +166,10 @@ public class BookingController {
                     bsEntity.setBooking(saved);
                     bsEntity.setSeat(seat);
                     bookingSeatRepo.save(bsEntity);
+
+                    // mark seat unavailable to prevent double-booking
+                    seat.setAvailable(false);
+                    seatRepo.save(seat);
                 }
             }
         }

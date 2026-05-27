@@ -120,8 +120,10 @@ export default function PaymentPage() {
 
     const bookingPayload = {
       routeId: route.routeId,
+      busId: route.busId ?? route.bus?.busId ?? route.bus?.id,
       route: { routeId: route.routeId },
-      seats: selectedSeats.map((seat) => seat.seatId ?? seat.id ?? seat.seatNumber),
+      seats: selectedSeats.map((seat) => seat.seatNumber),
+      seatNumbers: selectedSeats.map((seat) => seat.seatNumber),
       totalAmount,
       payment: {
         cardHolder: form.cardHolder || form.fullName,

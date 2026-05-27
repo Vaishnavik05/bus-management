@@ -113,10 +113,7 @@ export default function MyBookingsPage() {
   }
 
   function buildReceiptHtml(booking) {
-    const seats = (booking?.seats || booking?.bookingSeats || [])
-      .map((s) => s.seatNumber || s.seat?.seatNumber)
-      .filter(Boolean)
-      .join(", ") || "-";
+    const seats = formatBookedSeats(booking);
 
     return `
       <html>
@@ -141,6 +138,24 @@ export default function MyBookingsPage() {
         </body>
       </html>
     `;
+  }
+
+  function formatBookedSeats(booking) {
+    const items = booking?.bookingSeats || booking?.seats || booking?.selectedSeats || [];
+
+    const seats = items
+      .map((item) =>
+        item?.seatNumber ??
+        item?.seatNo ??
+        item?.number ??
+        item?.seat?.seatNumber ??
+        item?.seat?.number ??
+        item
+      )
+      .filter(Boolean)
+      .map(String);
+
+    return [...new Set(seats)].join(", ") || "-";
   }
 
   return (
@@ -172,12 +187,7 @@ export default function MyBookingsPage() {
                     <td>
                       {b.route?.source} → {b.route?.destination} ({b.route?.travelDate})
                     </td>
-                    <td>
-                      {(b.seats || b.bookingSeats || [])
-                        .map((s) => s.seatNumber || s.seat?.seatNumber)
-                        .filter(Boolean)
-                        .join(", ") || "-"}
-                    </td>
+                    <td>{formatBookedSeats(b)}</td>
                     <td>{Number(b.totalAmount || 0).toFixed(2)}</td>
                     <td>{b.status}</td>
                     <td className="table-actions">
