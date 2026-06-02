@@ -53,7 +53,6 @@ export default function MyBookingsPage() {
     try {
       await cancelBooking(bookingId);
 
-      // Remove cancelled row immediately from UI
       setBookings((prev) => prev.filter((b) => b.bookingId !== bookingId));
 
       alert("Booking cancelled. Your money will be refunded within 2 days.");
